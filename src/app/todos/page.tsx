@@ -28,21 +28,26 @@ export default function TodoList() {
         if (!token || !sessionData?.user?.id) return
         setIsLoading(true)
 
-        const pg = getPg(token)
-        const { data, error } = await pg
-            .from("todos")
-            .select("*")
-            .eq("user_id", sessionData?.user.id)
+        try {
+            const pg = getPg(token)
+            const { data, error } = await pg
+                .from("todos")
+                .select("*")
+                .eq("user_id", sessionData?.user.id)
 
-        if (data) {
-            setTodos(data)
-        }
-        if (error) {
+            if (data) {
+                setTodos(data)
+            }
+            if (error) {
+                console.error("Failed to load todos:", error)
+                toast.error("Failed to load todos")
+            }
+        } catch (error) {
             console.error("Failed to load todos:", error)
             toast.error("Failed to load todos")
+        } finally {
+            setIsLoading(false)
         }
-
-        setIsLoading(false)
     }, [token, sessionData?.user?.id])
 
     useEffect(() => {
@@ -55,70 +60,85 @@ export default function TodoList() {
 
         setIsLoading(true)
 
-        const pg = getPg(token)
-        const { error } = await pg.from("todos").insert({
-            task: newTask.trim()
-        })
+        try {
+            const pg = getPg(token)
+            const { error } = await pg.from("todos").insert({
+                task: newTask.trim()
+            })
 
-        setNewTask("")
-        await loadTodos()
+            setNewTask("")
+            await loadTodos()
 
-        if (error) {
+            if (error) {
+                console.error("Failed to create todo:", error)
+                toast.error("Failed to create todo")
+            } else {
+                toast.success("Todo added")
+            }
+        } catch (error) {
             console.error("Failed to create todo:", error)
             toast.error("Failed to create todo")
-        } else {
-            toast.success("Todo added")
+        } finally {
+            setIsLoading(false)
         }
-
-        setIsLoading(false)
     }
 
     async function toggleComplete(todoId: number, isComplete: boolean) {
         if (!token) return
         setLoadingTodoId(todoId.toString())
 
-        const pg = getPg(token)
-        const { error } = await pg
-            .from("todos")
-            .update({ is_complete: !isComplete })
-            .eq("id", todoId)
-            .eq("user_id", sessionData?.user.id)
+        try {
+            const pg = getPg(token)
+            const { error } = await pg
+                .from("todos")
+                .update({ is_complete: !isComplete })
+                .eq("id", todoId)
+                .eq("user_id", sessionData?.user.id)
 
-        await loadTodos()
+            await loadTodos()
 
-        if (error) {
+            if (error) {
+                console.error("Failed to update todo:", error)
+                toast.error("Failed to update todo")
+            } else {
+                toast.success(
+                    isComplete ? "Todo marked as incomplete" : "Todo completed"
+                )
+            }
+        } catch (error) {
             console.error("Failed to update todo:", error)
             toast.error("Failed to update todo")
-        } else {
-            toast.success(
-                isComplete ? "Todo marked as incomplete" : "Todo completed"
-            )
+        } finally {
+            setLoadingTodoId(null)
         }
-
-        setLoadingTodoId(null)
     }
 
     async function deleteTodo(todoId: number) {
         if (!token) return
         setLoadingTodoId(todoId.toString())
 
-        const pg = getPg(token)
-        const { error } = await pg
-            .from("todos")
-            .delete()
-            .eq("id", todoId)
-            .eq("user_id", sessionData?.user.id)
+        try {
+            const pg = getPg(token)
+            const { error } = await pg
+                .from("todos")
+                .delete()
+                .eq("id", todoId)
+                .eq("user_id", sessionData?.user.id)
 
-        await loadTodos()
+            await loadTodos()
 
-        if (error) {
+            if (error) {
+                console.error("Failed to delete todo:", error)
+                toast.error("Failed to delete todo")
+            } else {
+                toast.success("Todo deleted")
+            }
+        } catch (error) {
             console.error("Failed to delete todo:", error)
             toast.error("Failed to delete todo")
-        } else {
-            toast.success("Todo deleted")
+        } finally {
+            setLoadingTodoId(null)
         }
-
-        setLoadingTodoId(null)
     }
 
     return (
